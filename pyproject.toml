@@ -1,0 +1,15 @@
+[project]
+name = "donaciones"
+version = "0.1.0"
+description = "Sistema de gestión y distribución de donaciones post-sismo"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+
+[tool.mypy]
+strict = true
+python_version = "3.10"
+files = ["donaciones", "tests"]

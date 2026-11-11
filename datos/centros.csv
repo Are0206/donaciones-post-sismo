@@ -1,0 +1,8 @@
+id,nombre,tipo,ciudad,latitud,longitud,capacidad_m3,tiene_frio
+CA-01,Aeropuerto Palonegro,AEROPUERTO,Lebrija,7.1265,-73.1848,4000.0,SI
+CA-02,Aeropuerto El Dorado,AEROPUERTO,Bogotá,4.7016,-74.1469,12000.0,SI
+CA-03,Puerto fluvial de Barrancabermeja,PUERTO,Barrancabermeja,7.0653,-73.8547,6000.0,NO
+CA-04,Acopio regional Bucaramanga,ACOPIO_REGIONAL,Bucaramanga,7.1193,-73.1227,5000.0,SI
+CA-05,Acopio intermedio San Gil,ACOPIO_INTERMEDIO,San Gil,6.5551,-73.1337,1800.0,SI
+CA-06,Acopio intermedio Socorro,ACOPIO_INTERMEDIO,Socorro,6.4682,-73.2604,1200.0,NO
+CA-07,Acopio intermedio Piedecuesta,ACOPIO_INTERMEDIO,Piedecuesta,6.9879,-73.0499,1500.0,NO

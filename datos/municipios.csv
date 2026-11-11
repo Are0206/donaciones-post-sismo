@@ -1,0 +1,17 @@
+id,nombre,departamento,latitud,longitud,poblacion_afectada,urgencia
+MUN-001,Los Santos,Santander,6.7553,-73.1022,11500,CRITICA
+MUN-002,Zapatoca,Santander,6.815,-73.2683,9800,CRITICA
+MUN-003,Jordán,Santander,6.7325,-73.0961,1300,CRITICA
+MUN-004,Villanueva,Santander,6.6717,-73.1747,7600,ALTA
+MUN-005,Barichara,Santander,6.6347,-73.2236,7200,ALTA
+MUN-006,Aratoca,Santander,6.6947,-73.0181,8400,ALTA
+MUN-007,Curití,Santander,6.6056,-73.0686,11900,ALTA
+MUN-008,Cepitá,Santander,6.7536,-72.9744,1900,CRITICA
+MUN-009,Betulia,Santander,6.8997,-73.2836,5600,MEDIA
+MUN-010,Piedecuesta,Santander,6.9879,-73.0499,24000,MEDIA
+MUN-011,Girón,Santander,7.0682,-73.1698,18000,BAJA
+MUN-012,Floridablanca,Santander,7.0622,-73.0864,15000,BAJA
+MUN-013,San Gil,Santander,6.5551,-73.1337,12000,MEDIA
+MUN-014,Socorro,Santander,6.4682,-73.2604,6000,BAJA
+MUN-015,Lebrija,Santander,7.1131,-73.2178,4000,BAJA
+MUN-016,Bucaramanga,Santander,7.1193,-73.1227,30000,BAJA
