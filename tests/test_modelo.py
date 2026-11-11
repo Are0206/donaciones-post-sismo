@@ -10,7 +10,7 @@ import pytest
 
 from donaciones.modelo import (
     AporteEconomico, Categoria, CentroAcopio, Donante, ErrorValidacion, EstadoLote, EstadoVia,
-    Lote, Municipio, Necesidad, TipoCentro, TipoDonante, Urgencia, Via,
+    TRANSICIONES, Lote, Municipio, Necesidad, TipoCentro, TipoDonante, Urgencia, Via,
 )
 
 
@@ -88,7 +88,7 @@ def test_las_entidades_son_inmutables() -> None:
 
 def test_replace_crea_una_copia_y_la_vuelve_a_validar() -> None:
     original = lote()
-    asignado = dataclasses.replace(original, estado=EstadoLote.ASIGNADO)
+    asignado = dataclasses.replace(original, estado=EstadoLote.ASIGNADO, municipio_destino_id="MUN-001")
     assert asignado.estado is EstadoLote.ASIGNADO
     assert original.estado is EstadoLote.DISPONIBLE        # el original no cambia
     with pytest.raises(ErrorValidacion):
@@ -127,6 +127,28 @@ def test_replace_crea_una_copia_y_la_vuelve_a_validar() -> None:
 ])
 def test_lote_invalido(cambios: dict[str, Any], campo: str) -> None:
     _falla_en(lote, campo, **cambios)
+
+
+@pytest.mark.parametrize(("cambios", "campo"), [
+    ({"estado": EstadoLote.ASIGNADO}, "municipio_destino_id"),           # asignado sin destino
+    ({"estado": EstadoLote.DESPACHADO}, "municipio_destino_id"),
+    ({"municipio_destino_id": "MUN-001"}, "municipio_destino_id"),      # disponible con destino
+    ({"estado": EstadoLote.DESCARTADO, "municipio_destino_id": "MUN-001"}, "municipio_destino_id"),
+    ({"estado": EstadoLote.ASIGNADO, "municipio_destino_id": "Zapatoca"}, "municipio_destino_id"),
+])
+def test_estado_y_destino_van_de_la_mano(cambios: dict[str, Any], campo: str) -> None:
+    _falla_en(lote, campo, **cambios)
+
+
+def test_ningun_estado_regresa_a_disponible() -> None:
+    assert all(EstadoLote.DISPONIBLE not in destinos for destinos in TRANSICIONES.values())
+
+
+def test_vencido_incluye_el_dia_de_caducidad() -> None:
+    proximo = lote(fecha_caducidad=date(2026, 11, 20))
+    assert not proximo.vencido(date(2026, 11, 19))
+    assert proximo.vencido(date(2026, 11, 20))
+    assert not lote(categoria=Categoria.REFUGIO, fecha_caducidad=None).vencido(date(2099, 1, 1))
 
 
 def test_categoria_no_perecedera_puede_no_tener_caducidad() -> None:

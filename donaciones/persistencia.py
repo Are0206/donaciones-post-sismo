@@ -259,6 +259,7 @@ def _lote(r: Registro) -> Lote:
         fecha_caducidad=campo_fecha_opcional(r, "fecha_caducidad"),
         requiere_frio=campo_booleano(r, "requiere_frio"),
         estado=campo_enum(r, "estado", EstadoLote),
+        municipio_destino_id=campo_texto_opcional(r, "municipio_destino_id"),
     )
 
 
@@ -297,7 +298,8 @@ NECESIDADES = Esquema[Necesidad](
     _necesidad, lambda e: e.clave)
 LOTES = Esquema[Lote](
     "lotes", ("id", "donante_id", "centro_id", "categoria", "descripcion", "cantidad", "peso_kg",
-              "volumen_m3", "fecha_ingreso", "fecha_caducidad", "requiere_frio", "estado"),
+              "volumen_m3", "fecha_ingreso", "fecha_caducidad", "requiere_frio", "estado",
+              "municipio_destino_id"),
     _lote, lambda e: e.id)
 APORTES = Esquema[AporteEconomico](
     "aportes", ("id", "donante_id", "monto_cop", "fecha", "municipio_destino_id"),
@@ -376,6 +378,9 @@ def validar_lote(lote: Lote, ctx: Contexto) -> None:
     if lote.fecha_ingreso < ctx.fecha_evento:
         raise ErrorValidacion("fecha_ingreso",
                               f"{lote.fecha_ingreso} es anterior al sismo ({ctx.fecha_evento})")
+
+    if lote.municipio_destino_id is not None:
+        _existe("municipio_destino_id", lote.municipio_destino_id, ctx.municipios, "el municipio")
 
     centro = ctx.centros[lote.centro_id]
     if lote.requiere_frio and not centro.tiene_frio:

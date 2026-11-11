@@ -103,6 +103,23 @@ class EstadoLote(Enum):
     DESCARTADO = "DESCARTADO"   # vencido o dañado
 
 
+# Ciclo de vida de un lote: a qué estados puede pasar desde cada uno.
+# Solo se avanza: un lote asignado nunca vuelve a quedar disponible.
+#
+#   DISPONIBLE ──asignar──> ASIGNADO ──despachar──> DESPACHADO
+#        │
+#        └──descartar──> DESCARTADO
+TRANSICIONES: dict[EstadoLote, frozenset[EstadoLote]] = {
+    EstadoLote.DISPONIBLE: frozenset({EstadoLote.ASIGNADO, EstadoLote.DESCARTADO}),
+    EstadoLote.ASIGNADO: frozenset({EstadoLote.DESPACHADO}),
+    EstadoLote.DESPACHADO: frozenset(),
+    EstadoLote.DESCARTADO: frozenset(),
+}
+
+# Estados en los que el lote ya tiene un municipio destino
+ESTADOS_CON_DESTINO = frozenset({EstadoLote.ASIGNADO, EstadoLote.DESPACHADO})
+
+
 class EstadoVia(Enum):
     TRANSITABLE = "TRANSITABLE"
     RESTRINGIDA = "RESTRINGIDA"   # pasa, pero lento (un carril, derrumbes parciales)
@@ -295,6 +312,7 @@ class Lote:
     fecha_caducidad: date | None  # None solo en categorías no perecederas
     requiere_frio: bool
     estado: EstadoLote = EstadoLote.DISPONIBLE
+    municipio_destino_id: str | None = None   # a dónde va, si ya se asignó
 
     def __post_init__(self) -> None:
         _identificador("id", self.id, PATRON_LOTE, "LOT-000001")
@@ -322,9 +340,24 @@ class Lote:
                 raise ErrorValidacion("fecha_caducidad",
                                       "debe ser posterior a la fecha de ingreso")
 
+        # El destino y el estado deben ir de la mano
+        if self.estado in ESTADOS_CON_DESTINO:
+            if self.municipio_destino_id is None:
+                raise ErrorValidacion("municipio_destino_id",
+                                      f"un lote {self.estado.value} debe tener municipio destino")
+            _identificador("municipio_destino_id", self.municipio_destino_id,
+                           PATRON_MUNICIPIO, "MUN-001")
+        elif self.municipio_destino_id is not None:
+            raise ErrorValidacion("municipio_destino_id",
+                                  f"un lote {self.estado.value} no puede tener municipio destino")
+
     @property
     def unidad(self) -> str:
         return self.categoria.unidad
+
+    def vencido(self, hoy: date) -> bool:
+        """Si ya no se puede entregar: vence hoy o antes."""
+        return self.fecha_caducidad is not None and self.fecha_caducidad <= hoy
 
     def dias_para_vencer(self, hoy: date) -> int | None:
         """Días que faltan para la caducidad; None si no caduca."""

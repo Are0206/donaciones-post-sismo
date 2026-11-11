@@ -423,6 +423,15 @@ def test_aporte_antes_del_sismo_y_destino_inexistente(carpeta: Path) -> None:
     assert campos == ["fecha", "municipio_destino_id"]
 
 
+def test_lote_asignado_a_un_municipio_inexistente(carpeta: Path) -> None:
+    ruta = carpeta / "lotes.csv"
+    filas = leer_filas(ruta)
+    filas[0].update(estado="ASIGNADO", municipio_destino_id="MUN-999")
+    escribir_filas(ruta, filas)
+    rechazo = _unico_rechazo(_cargar(carpeta))
+    assert rechazo.campo == "municipio_destino_id" and "no existe" in rechazo.mensaje
+
+
 def test_via_hacia_un_nodo_inexistente(carpeta: Path) -> None:
     cambiar_celda(carpeta / "vias.csv", 0, "destino_id", "MUN-777")
     assert "no existe" in _unico_rechazo(_cargar(carpeta)).mensaje

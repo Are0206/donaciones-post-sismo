@@ -4,4 +4,6 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 *.tmp
+
+# Borrador de trabajo: con él se arma el anexo de IA del informe final
 DECISIONES.md

@@ -8,7 +8,7 @@ de ayuda humanitaria tras un sismo en Santander, Colombia.
 | Fase | Estado |
 |---|---|
 | 1. Modelado y fuentes de datos | Terminada |
-| 2. Especificación funcional | Pendiente |
+| 2. Especificación funcional | Terminada |
 | 3. Estructuras de datos | Pendiente |
 | 4. Interfaz gráfica | Pendiente |
 
@@ -60,7 +60,7 @@ terminar cada fase.
 | `municipios.csv` | Municipios afectados: ubicación, población afectada, nivel de urgencia |
 | `necesidades.csv` | Cuánto necesita cada municipio de cada categoría (llave: municipio + categoría) |
 | `donantes.csv` | Personas, empresas, ONG, gobiernos y cooperación internacional |
-| `lotes.csv` | Ayuda en especie: categoría, cantidad, peso, volumen, caducidad, frío, estado |
+| `lotes.csv` | Ayuda en especie: categoría, cantidad, peso, volumen, caducidad, frío, estado y municipio destino |
 | `aportes.csv` | Aportes en dinero (pesos, enteros) con destino opcional |
 | `vias.csv` | Red vial: distancia, tiempo estimado y estado (transitable, restringida, cerrada) |
 
@@ -74,7 +74,9 @@ donaciones/
   modelo.py          entidades (dataclasses inmutables), sus reglas internas y la fecha del sismo
   persistencia.py    conversión de valores, reglas entre entidades, lectura y escritura CSV/JSON
   generador.py       datos sintéticos con semilla fija
+  operaciones.py     registro, búsqueda, asignación por urgencia, despacho e informes
 tests/
   test_modelo.py         reglas de cada entidad
   test_persistencia.py   conversión, archivos malformados, integridad, ida y vuelta, datos generados
+  test_operaciones.py    lógica de negocio y consistencia ante transacciones masivas y concurrentes
 ```
