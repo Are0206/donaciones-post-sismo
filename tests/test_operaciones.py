@@ -1,6 +1,7 @@
 """Fase 2 — Lógica de negocio y consistencia del inventario."""
 from __future__ import annotations
 
+import dataclasses
 import sys
 import threading
 from collections.abc import Iterator
@@ -10,10 +11,11 @@ from typing import Any
 
 import pytest
 
+from donaciones.estructuras import Criterio
 from donaciones.generador import CENTROS, generar
 from donaciones.modelo import (
-    FECHA_EVENTO, Categoria, Donante, ErrorValidacion, EstadoLote, Lote, Municipio, Necesidad,
-    TipoDonante, Urgencia,
+    FECHA_EVENTO, Categoria, Donante, ErrorValidacion, EstadoLote, EstadoVia, Lote, Municipio,
+    Necesidad, TipoDonante, Urgencia, Via,
 )
 from donaciones.operaciones import ErrorOperacion, SistemaDonaciones
 from donaciones.persistencia import Datos, cargar_csv
@@ -403,3 +405,102 @@ def test_operaciones_concurrentes_mezcladas_conservan_el_inventario() -> None:
     esperados[AGUA] += sum(l.cantidad for l in registrados)
     assert _total_por_categoria(s) == esperados
     assert s.verificar_consistencia() == []
+
+
+# ============================================================
+# Fase 3: operaciones apoyadas en las estructuras
+# ============================================================
+
+def _con_red_vial() -> SistemaDonaciones:
+    """MUN-001 queda a 5 h de CA-01 y a 1 h de CA-06."""
+    datos = _escenario()
+    datos.lotes = []
+    datos.necesidades = [Necesidad("MUN-001", AGUA, 500)]
+    datos.vias = [
+        Via("CA-01", "MUN-001", 200.0, 5.0, EstadoVia.TRANSITABLE),
+        Via("CA-06", "MUN-001", 30.0, 1.0, EstadoVia.TRANSITABLE),
+    ]
+    return SistemaDonaciones(datos)
+
+
+def test_inventario_por_centro(sistema: SistemaDonaciones) -> None:
+    assert sistema.inventario_centro("CA-01")[AGUA] == 1800
+    _registrar(sistema, centro_id="CA-06", cantidad=100)
+    assert sistema.inventario_centro("CA-06")[AGUA] == 100
+    sistema.asignar("LOT-000001", "MUN-001", HOY)                     # sale del inventario disponible
+    assert sistema.inventario_centro("CA-01")[AGUA] == 1200
+    assert sistema.inventario_centro("CA-01")[Categoria.MEDICO] == 0
+    with pytest.raises(ErrorOperacion):
+        sistema.inventario_centro("CA-99")
+
+
+def test_aportes_por_rango_de_monto(sistema: SistemaDonaciones) -> None:
+    for monto in [50_000, 2_000_000, 10_000_000, 80_000_000]:
+        sistema.registrar_aporte(donante_id="DON-0001", monto_cop=monto, fecha=HOY)
+    montos = [a.monto_cop for a in sistema.aportes_por_monto(2_000_000, 10_000_000)]
+    assert montos == [2_000_000, 10_000_000]                          # ambos extremos incluidos
+    assert sistema.aportes_por_monto(100_000_000, 200_000_000) == []
+
+
+def test_ruta_por_la_red_vial() -> None:
+    s = _con_red_vial()
+    ruta = s.ruta("CA-01", "CA-06", Criterio.TIEMPO)
+    assert ruta is not None and ruta.nodos == ("CA-01", "MUN-001", "CA-06") and ruta.costo == 6.0
+    assert s.ruta("CA-01", "MUN-999") is None
+
+
+def test_a_igual_caducidad_prefiere_el_centro_mas_cercano() -> None:
+    s = _con_red_vial()
+    lejos = _registrar(s, centro_id="CA-01", cantidad=600)
+    cerca = _registrar(s, centro_id="CA-06", cantidad=600)
+    hechas = s.asignar_automaticamente(HOY)
+    assert [a.lote_id for a in hechas] == [cerca.id]
+    assert lejos.id in {l.id for l in s.buscar_lotes(estado=EstadoLote.DISPONIBLE)}
+
+
+def test_la_caducidad_pesa_mas_que_la_cercania() -> None:
+    s = _con_red_vial()
+    lejos_vence_antes = _registrar(s, centro_id="CA-01", cantidad=600, fecha_caducidad=date(2026, 12, 1))
+    _registrar(s, centro_id="CA-06", cantidad=600, fecha_caducidad=date(2027, 6, 1))
+    assert [a.lote_id for a in s.asignar_automaticamente(HOY)] == [lejos_vence_antes.id]
+
+
+def test_a_igual_urgencia_se_reparte_antes_lo_que_vence_antes(sistema: SistemaDonaciones) -> None:
+    sistema.datos.necesidades.append(Necesidad("MUN-001", Categoria.MEDICO, 50))
+    sistema = SistemaDonaciones(sistema.datos)                        # reconstruye los índices
+    _registrar(sistema, categoria=Categoria.MEDICO, descripcion="Insulina", cantidad=50,
+               centro_id="CA-01", fecha_caducidad=date(2026, 11, 20))  # vence en 10 días
+    hechas = sistema.asignar_automaticamente(HOY)
+    assert hechas[0].categoria is Categoria.MEDICO                    # antes que el agua del mismo municipio
+
+
+def test_solicitudes_en_riesgo_salen_por_el_lado_max(sistema: SistemaDonaciones) -> None:
+    sistema.datos.necesidades.append(Necesidad("MUN-002", Categoria.REFUGIO, 10))
+    sistema = SistemaDonaciones(sistema.datos)
+    _registrar(sistema, categoria=Categoria.REFUGIO, descripcion="Carpa", cantidad=50, fecha_caducidad=None)
+    en_riesgo = sistema.solicitudes_en_riesgo(HOY, 5)
+    # Agua: se piden 2000 y hay 1800 → hay déficit; refugio alcanza → no aparece.
+    # La menos prioritaria (BAJA) sale primero.
+    assert [(a.municipio.id, a.categoria) for a in en_riesgo] == [("MUN-002", AGUA), ("MUN-001", AGUA)]
+
+
+def test_sin_deficit_no_hay_solicitudes_en_riesgo(sistema: SistemaDonaciones) -> None:
+    _registrar(sistema, cantidad=5000)
+    assert sistema.solicitudes_en_riesgo(HOY, 5) == []
+
+
+def test_la_verificacion_detecta_indices_desincronizados(sistema: SistemaDonaciones) -> None:
+    assert sistema.verificar_consistencia() == []
+    # Cambiar un lote "por debajo", sin pasar por las operaciones, desincroniza los índices
+    sistema.datos.lotes[0] = dataclasses.replace(sistema.datos.lotes[0], cantidad=999)
+    problemas = sistema.verificar_consistencia()
+    assert any("balance" in p for p in problemas) and any("árbol" in p for p in problemas)
+
+
+def test_los_indices_se_reconstruyen_al_cargar(sistema: SistemaDonaciones, tmp_path: Path) -> None:
+    sistema.asignar_automaticamente(HOY)
+    sistema.despachar("LOT-000002")
+    sistema.guardar(tmp_path)
+    recargado = SistemaDonaciones(cargar_csv(tmp_path).datos)
+    assert recargado.verificar_consistencia() == []
+    assert recargado.balance() == sistema.balance()

@@ -29,7 +29,7 @@ import math
 import os
 import re
 import sys
-from collections.abc import Callable, Hashable, Mapping, Sequence
+from collections.abc import Callable, Container, Hashable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from enum import Enum
@@ -350,14 +350,16 @@ class Carga:
 
 @dataclass
 class Contexto:
+    """Lo ya cargado. Acepta cualquier colección que responda a `in`
+    (y a [] en los centros): así sirve tanto un dict de Python como la
+    TablaHash propia de la Fase 3."""
     fecha_evento: date
-    centros: dict[str, CentroAcopio] = field(default_factory=dict)
-    municipios: set[str] = field(default_factory=set)
-    donantes: set[str] = field(default_factory=set)
+    centros: Mapping[str, CentroAcopio] = field(default_factory=dict)
+    municipios: Container[str] = field(default_factory=set)
+    donantes: Container[str] = field(default_factory=set)
 
 
-def _existe(campo: str, identificador: str, conjunto: set[str] | dict[str, CentroAcopio],
-            que: str) -> None:
+def _existe(campo: str, identificador: str, conjunto: Container[str], que: str) -> None:
     if identificador not in conjunto:
         raise ErrorValidacion(campo, f"{que} {identificador} no existe")
 

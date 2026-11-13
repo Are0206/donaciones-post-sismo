@@ -9,7 +9,7 @@ de ayuda humanitaria tras un sismo en Santander, Colombia.
 |---|---|
 | 1. Modelado y fuentes de datos | Terminada |
 | 2. Especificación funcional | Terminada |
-| 3. Estructuras de datos | Pendiente |
+| 3. Estructuras de datos | Terminada |
 | 4. Interfaz gráfica | Pendiente |
 
 ## Instalación (Windows)
@@ -38,6 +38,7 @@ con `(.venv)`.
 ```
 python -m donaciones.generador      # crea los datos en datos\
 python -m donaciones.persistencia   # carga los CSV y reporta errores con su línea
+python -m donaciones.benchmark      # compara cada estructura con su alternativa ingenua
 .\test.bat                          # mypy estricto + todas las pruebas
 ```
 
@@ -74,9 +75,12 @@ donaciones/
   modelo.py          entidades (dataclasses inmutables), sus reglas internas y la fecha del sismo
   persistencia.py    conversión de valores, reglas entre entidades, lectura y escritura CSV/JSON
   generador.py       datos sintéticos con semilla fija
-  operaciones.py     registro, búsqueda, asignación por urgencia, despacho e informes
+  operaciones.py     registro, búsqueda, asignación por triaje, despacho, informes y rutas
+  estructuras.py     tabla hash, montículo min-max, árbol AVL y grafo con Dijkstra
+  benchmark.py       cada estructura contra su alternativa ingenua
 tests/
   test_modelo.py         reglas de cada entidad
   test_persistencia.py   conversión, archivos malformados, integridad, ida y vuelta, datos generados
   test_operaciones.py    lógica de negocio y consistencia ante transacciones masivas y concurrentes
+  test_estructuras.py    casos de borde, invariantes y comparación con un oráculo
 ```
