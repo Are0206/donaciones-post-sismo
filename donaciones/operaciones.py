@@ -197,6 +197,26 @@ class SistemaDonaciones:
     # 1. Registro
     # ========================================================
 
+    def validar_nuevo_lote(self, *, donante_id: str, centro_id: str, categoria: Categoria,
+                           descripcion: str, cantidad: int, peso_kg: float, volumen_m3: float,
+                           fecha_ingreso: date, fecha_caducidad: date | None,
+                           requiere_frio: bool) -> Lote:
+        """Construye y valida el lote que se registraría, SIN registrarlo.
+
+        Sirve para que un formulario muestre los errores antes de enviar.
+        Lanza ErrorValidacion igual que registrar_lote.
+        """
+        with self._candado:
+            lote = Lote(
+                id=f"LOT-{self._ultimo_lote + 1:06d}", donante_id=donante_id,
+                centro_id=centro_id, categoria=categoria, descripcion=descripcion,
+                cantidad=cantidad, peso_kg=peso_kg, volumen_m3=volumen_m3,
+                fecha_ingreso=fecha_ingreso, fecha_caducidad=fecha_caducidad,
+                requiere_frio=requiere_frio,
+            )
+            validar_lote(lote, self._contexto)
+            return lote
+
     def registrar_lote(self, *, donante_id: str, centro_id: str, categoria: Categoria,
                        descripcion: str, cantidad: int, peso_kg: float, volumen_m3: float,
                        fecha_ingreso: date, fecha_caducidad: date | None,
@@ -208,14 +228,12 @@ class SistemaDonaciones:
         Complejidad: O(log n) (validar en tablas hash e insertar en el AVL).
         """
         with self._candado:
-            lote = Lote(
-                id=f"LOT-{self._ultimo_lote + 1:06d}", donante_id=donante_id,
-                centro_id=centro_id, categoria=categoria, descripcion=descripcion,
-                cantidad=cantidad, peso_kg=peso_kg, volumen_m3=volumen_m3,
-                fecha_ingreso=fecha_ingreso, fecha_caducidad=fecha_caducidad,
-                requiere_frio=requiere_frio,
+            lote = self.validar_nuevo_lote(
+                donante_id=donante_id, centro_id=centro_id, categoria=categoria,
+                descripcion=descripcion, cantidad=cantidad, peso_kg=peso_kg,
+                volumen_m3=volumen_m3, fecha_ingreso=fecha_ingreso,
+                fecha_caducidad=fecha_caducidad, requiere_frio=requiere_frio,
             )
-            validar_lote(lote, self._contexto)
             self._datos.lotes.append(lote)
             self._pos_lote[lote.id] = len(self._datos.lotes) - 1
             self._indexar(lote, +1)
